@@ -1,0 +1,90 @@
+#requirement engine in colab
+!pip install tensorflow-gpu==2.8.0 
+
+#importing libraries 
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Flatten, Dense, Conv2D, MaxPool2D, Dropout
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+#cloning the dataset from my repository
+!git clone https://github.com/surya131096/Malaria-Classification-Using-CNN.git
+
+#retreiving the dataset
+datagen = ImageDataGenerator(rescale = 1./255, validation_split = 0.2)
+
+
+#scaling the images 
+image_width = 128
+image_height = 128
+
+#training and validation 
+train_datagen = datagen.flow_from_directory (directory = '/content/Malaria-Classification-Using-CNN/malaria-dataset',
+                                             target_size = (image_width, image_height),
+                                             class_mode = 'binary',
+                                             batch_size = 32,
+                                             subset = 'training'
+                                             )
+											 
+validation_datagen = datagen.flow_from_directory (directory = '/content/Malaria-Classification-Using-CNN/malaria-dataset',
+                                             target_size = (image_width, image_height),
+                                             class_mode = 'binary',
+                                             batch_size = 32,
+                                             subset = 'validation'
+                                             )
+											 
+train_datagen.labels
+
+
+
+CNN Model Building
+
+
+model = Sequential()
+model.add(Conv2D(16,(3,3),input_shape = (image_width, image_height, 3), activation = 'relu'))
+model.add(MaxPool2D(2,2))
+model.add(Dropout(0.2))
+
+model.add(Conv2D(32,(3,3), activation = 'relu'))
+model.add(MaxPool2D(2,2))
+model.add(Dropout(0.3))
+
+model.add(Flatten())
+model.add(Dense(64,activation = 'relu'))
+model.add(Dropout(0.5))
+
+model.add(Dense(1,activation = 'sigmoid'))
+
+
+model.summary()
+
+
+#model_compilation
+model.compile(optimizer = 'adam', loss= 'binary_crossentropy', metrics = ['accuracy'])
+
+#Building with minimum epochs
+history = model.fit_generator(generator = train_datagen,
+                              steps_per_epoch = len(train_datagen),
+                              epochs = 2,
+                              validation_data = validation_datagen,
+                              validation_steps = len(validation_datagen))
+							  
+# loss - able to visualize the model
+plt.plot(history.history['loss'], label='train loss')
+plt.plot(history.history['val_loss'], label='val loss')
+plt.legend()
+plt.show()
+plt.savefig('LossVal_loss')
+
+#saving the model 
+from keras.models import load_model
+model.save('malaria_det.h5')
+
+#prediction
+y_pred = model.predict(train_datagen)
+y_pred= np.argmax(y_pred, axis= 1)
+y_pred
